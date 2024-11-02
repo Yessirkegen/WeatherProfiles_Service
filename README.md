@@ -1,103 +1,140 @@
-# WeatherProfiles_Service
-Почему у нас такая архитектура: сервисы, репозитории, контроллеры и т.д.
-Обзор архитектуры:
+WeatherProfiles_Service
+Welcome to WeatherProfiles_Service! This application is a robust user authentication and weather profiling service built with Go (Golang), leveraging modern software design patterns and secure authentication mechanisms.
 
-Контроллеры: Отвечают за обработку HTTP-запросов и формирование HTTP-ответов.
-Сервисы: Содержат бизнес-логику приложения.
-Репозитории: Отвечают за взаимодействие с базой данных.
-Модели: Описывают структуры данных.
-Утилиты и Middleware: Вспомогательные функции и промежуточные слои для обработки запросов.
-Детальное объяснение:
+Table of Contents
+Features
+Technologies Used
+Software Design Patterns
+Challenges Faced
+Getting Started
+Prerequisites
+Installation
+Running the Application
+Contributing
+License
+Features
+User Registration and Authentication: Secure user signup and login using hashed passwords and JWT tokens.
+Profile Management: Access and update user profiles securely.
+Weather Data Integration: Fetch and display weather data (future implementation).
+RESTful API: Clean and well-structured API endpoints.
+Secure Password Handling: Passwords are hashed using bcrypt before storage.
+JWT Authentication: Secure token-based authentication for API endpoints.
+Technologies Used
+Go (Golang): Main programming language.
+Gin: Web framework for building HTTP web services.
+GORM: ORM library for Golang, handling database operations.
+PostgreSQL: Relational database for data storage.
+JWT (JSON Web Tokens): For secure user authentication.
+bcrypt: Password hashing function.
+Docker: Containerization for consistent development environments (planned).
+godotenv: Loading environment variables from .env files.
+Software Design Patterns
+The application employs several software design patterns to ensure code modularity, maintainability, and scalability:
 
-Модели (models):
+MVC (Model-View-Controller): Separating the application into Models, Views (not used in API-only applications), and Controllers.
+Repository Pattern: Abstracting data access logic to repositories, providing a cleaner separation between the data and domain layers.
+Service Layer Pattern: Encapsulating the business logic of the application, making controllers thin and focused on HTTP handling.
+Singleton Pattern: Ensuring a single instance of the database connection throughout the application.
+Factory Pattern: Used in initializing controllers and services, promoting loose coupling.
+Challenges Faced
+During the development of WeatherProfiles_Service, several challenges were encountered:
 
-Что это: Структуры данных, которые представляют сущности в вашем приложении (например, User).
-Роль: Определяют, как данные будут храниться в базе данных и как они будут использоваться в приложении.
-Репозитории (repositories):
+1. JWT_SECRET Environment Variable Not Set
+Problem: The application failed to start due to the JWT_SECRET environment variable not being set.
 
-Дизайн-паттерн: Repository Pattern
-Что это: Класс или компонент, который инкапсулирует логику доступа к данным.
-Роль: Предоставляет абстракцию над базой данных, позволяя выполнять CRUD операции (Create, Read, Update, Delete) без знания деталей базы данных.
-Преимущества:
-Изоляция доступа к данным от бизнес-логики.
-Тестируемость: Можно легко замокать репозиторий для модульного тестирования сервисов.
-Гибкость: Позволяет менять способ хранения данных (например, сменить базу данных) без изменения бизнес-логики.
-Сервисы (services):
+Solution:
 
-Дизайн-паттерн: Service Layer Pattern
-Что это: Слой, который содержит бизнес-логику приложения.
-Роль: Обрабатывает данные, выполняет операции и применяет правила бизнеса.
-Преимущества:
-Снижение сложности контроллеров: Контроллеры просто вызывают методы сервисов и не содержат бизнес-логики.
-Повторное использование кода: Бизнес-логика может быть использована в разных местах приложения.
-Тестируемость: Бизнес-логику можно тестировать отдельно от контроллеров и репозиториев.
-Контроллеры (controllers):
+Ensured the JWT_SECRET was set in the environment or loaded from a .env file using godotenv.
+Modified the initialization function to load the secret and handle cases where it's missing.
+2. Password Comparison Failing with Bcrypt
+Problem: Users couldn't log in because password comparison failed, even with correct credentials.
 
-Дизайн-паттерн: Model-View-Controller (MVC)
-Что это: Компоненты, которые обрабатывают HTTP-запросы и возвращают HTTP-ответы.
-Роль: Получают входные данные из запроса, передают их в сервисы, и возвращают результаты клиенту.
-Преимущества:
-Чистота кода: Контроллеры не содержат бизнес-логики или логики доступа к данным.
-Разделение ответственности: Улучшает читабельность и поддерживаемость кода.
-Middleware (middleware):
+Cause:
 
-Дизайн-паттерн: Decorator
-Что это: Функции, которые обрабатывают запросы между клиентом и контроллерами.
-Роль: Добавляют дополнительную функциональность к обработке запросов, такую как аутентификация, логирование, обработка ошибок.
-Преимущества:
-Повторное использование кода: Middleware можно применять к разным маршрутам.
-Модульность: Позволяет добавлять или изменять функциональность без изменения контроллеров.
-Утилиты (utils):
+The Password field in the User model had the json:"-" tag, preventing it from being populated during JSON binding.
+This resulted in an empty password being hashed and stored during registration.
+Solution:
 
-Что это: Вспомогательные функции и компоненты, используемые в разных частях приложения.
-Пример: Генерация и парсинг JWT-токенов для аутентификации.
-Дизайн-паттерны и их применение в архитектуре:
+Changed the JSON tag to json:"password" to allow the password to be received from the client.
+Ensured that the password is not returned in responses by omitting it or using separate response structs.
+3. Type Mismatch with JWT Key
+Problem: An error occurred during token generation due to a type mismatch in the JWT signing key.
 
-Singleton (Одиночка):
+Solution:
 
-Где используется: В utils/database.go для создания единственного экземпляра подключения к базе данных.
-Почему: Чтобы обеспечить единое соединение с базой данных и предотвратить создание множества подключений, что может привести к исчерпанию ресурсов.
-Repository Pattern (Паттерн Репозиторий):
+Updated the jwtKey variable to be of type []byte instead of string, as required by the SignedString method.
+Loaded the key from the environment securely.
+4. Improper Error Handling and Logging
+Problem: Difficulty in debugging due to insufficient logging and error messages.
 
-Где используется: В repositories/user_repository.go.
-Почему: Для абстракции логики доступа к данным и обеспечения гибкости в работе с разными источниками данных.
-Service Layer Pattern (Слой Сервисов):
+Solution:
 
-Где используется: В services/user_service.go.
-Почему: Для концентрации бизнес-логики в одном месте, что упрощает поддержку и тестирование.
-Dependency Injection (Внедрение Зависимостей):
+Enhanced logging throughout the application, especially in areas dealing with authentication and token generation.
+Provided clear and descriptive error messages to assist in debugging.
+Getting Started
+Prerequisites
+Go: Version 1.16 or higher.
+PostgreSQL: Ensure you have a PostgreSQL server running.
+Git: For cloning the repository.
+cURL or Postman: For testing API endpoints.
+Installation
+Clone the repository:
 
-Где используется: При передаче зависимостей в конструкторы (NewUserRepository, NewUserService, NewUserController).
-Почему: Для снижения связности между компонентами и облегчения тестирования через подмену зависимостей.
-Factory Method (Фабричный Метод):
+bash
+Copy code
+git clone https://github.com/yourusername/WeatherProfiles_Service.git
+cd WeatherProfiles_Service
+Set up environment variables:
 
-Где используется: В функциях-конструкторах для создания экземпляров (NewUserRepository, NewUserService, NewUserController).
-Почему: Для инкапсуляции процесса создания объектов и применения дополнительных настроек при создании.
-Facade (Фасад):
+Create a .env file in the root directory:
 
-Где используется: Контроллеры действуют как фасады, упрощая взаимодействие между клиентом и сервисами.
-Почему: Для предоставления простой интерфейсной точки взаимодействия и сокрытия сложности бизнес-логики.
-Decorator (Декоратор):
+env
+Copy code
+JWT_SECRET=your_secret_key
+DB_HOST=localhost
+DB_USER=postgres
+DB_PASSWORD=your_db_password
+DB_NAME=userdb
+DB_PORT=5432
+Install dependencies:
 
-Где используется: В Middleware (middleware/auth.go) для добавления функциональности к обработке запросов.
-Почему: Для динамического расширения функциональности без изменения исходного кода контроллеров.
-Преимущества такой архитектуры:
+bash
+Copy code
+go mod download
+Set up the database:
 
-Модульность и Разделение Ответственности:
+Ensure PostgreSQL is running.
+Create a database named userdb or as specified in your .env.
+Running the Application
+bash
+Copy code
+go run main.go
+The server will start on http://localhost:8080.
 
-Каждый компонент отвечает за свою часть работы, что упрощает понимание и поддержку кода.
-Тестируемость:
+Testing Endpoints
+Registration:
 
-Благодаря разделению на слои и использованию интерфейсов, можно легко писать модульные тесты для каждого компонента, подменяя зависимости.
-Гибкость и Расширяемость:
+bash
+Copy code
+curl -X POST -H "Content-Type: application/json" \
+-d '{"username":"testuser","email":"test@example.com","password":"password123456"}' \
+http://localhost:8080/register
+Login:
 
-Можно легко добавлять новые функции или изменять существующие без существенного влияния на другие части системы.
-Повторное Использование Кода:
+bash
+Copy code
+curl -X POST -H "Content-Type: application/json" \
+-d '{"email":"test@example.com","password":"password123456"}' \
+http://localhost:8080/login
+Access Protected Route:
 
-Бизнес-логика и функции доступа к данным могут быть использованы в разных частях приложения или даже в других проектах.
-Лёгкость в Поддержке и Обновлении:
+bash
+Copy code
+curl -H "Authorization: Bearer your_jwt_token" \
+http://localhost:8080/profile
+Contributing
+Contributions are welcome! Please fork the repository and submit a pull request for any enhancements or bug fixes.
 
-Чёткая структура облегчает понимание кода новым разработчикам и ускоряет процесс внесения изменений.
-Заключение:
+License
+This project is licensed under the MIT License.
 
-Такая архитектура, основанная на хорошо известных паттернах проектирования, позволяет создавать устойчивые к изменениям приложения, которые легко поддерживать и расширять. Она способствует чистому, организованному и понятному коду, что особенно важно при работе в команде или на долгосрочных проектах.
