@@ -1,9 +1,10 @@
 package middleware
 
 import (
-	"WeatherProfile_Service/utils"
 	"net/http"
 	"strings"
+
+	"WeatherProfile_Service/utils" // Замените на ваш путь
 
 	"github.com/gin-gonic/gin"
 )

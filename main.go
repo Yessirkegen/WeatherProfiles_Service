@@ -7,11 +7,19 @@ import (
 	"WeatherProfile_Service/repositories"
 	"WeatherProfile_Service/services"
 	"WeatherProfile_Service/utils"
+	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Загрузите переменные окружения из .env файла
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found")
+	}
+
 	db := utils.GetDBInstance()
 	db.AutoMigrate(&models.User{}) // Автоматическая миграция
 
