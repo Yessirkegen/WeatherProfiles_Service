@@ -1,66 +1,60 @@
-package controllers
+package services
 
 import (
 	"WeatherProfile_Service/models"
-	"WeatherProfile_Service/services"
-	"net/http"
+	"WeatherProfile_Service/repositories"
+	"log"
 
-	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
-type UserController struct {
-	service services.UserService
+type UserService interface {
+	Register(user *models.User) error
+	Login(email, password string) (*models.User, error)
+	GetUserByID(id uint) (*models.User, error)
 }
 
-func NewUserController(service services.UserService) *UserController {
-	return &UserController{service: service}
+type userService struct {
+	repo repositories.UserRepository
 }
 
-func (ctrl *UserController) Register(c *gin.Context) {
-	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	if err := ctrl.service.Register(&user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})
+func NewUserService(repo repositories.UserRepository) UserService {
+	return &userService{repo: repo}
 }
 
-func (ctrl *UserController) Login(c *gin.Context) {
-	var credentials struct {
-		Email    string `json:"email" binding:"required"`
-		Password string `json:"password" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&credentials); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	user, err := ctrl.service.Login(credentials.Email, credentials.Password)
+func (s *userService) Register(user *models.User) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
-		return
+		log.Printf("Error hashing password: %v", err)
+		return err
 	}
-	token, err := utils.GenerateJWT(user.ID)
+	user.Password = string(hashedPassword)
+	err = s.repo.Create(user)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
-		return
+		log.Printf("Error creating user: %v", err)
 	}
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	return err
 }
 
-func (ctrl *UserController) GetProfile(c *gin.Context) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
-	user, err := ctrl.service.GetUserByID(userID.(uint))
+func (s *userService) Login(email, password string) (*models.User, error) {
+	user, err := s.repo.FindByEmail(email)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
+		log.Printf("Error finding user by email (%s): %v", email, err)
+		return nil, err
 	}
-	c.JSON(http.StatusOK, user)
+	log.Printf("Found user: %+v", user)
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		log.Printf("Error comparing password for user (%s): %v", email, err)
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *userService) GetUserByID(id uint) (*models.User, error) {
+	user, err := s.repo.FindByID(id)
+	if err != nil {
+		log.Printf("Error finding user by ID (%d): %v", id, err)
+	}
+	return user, err
 }
